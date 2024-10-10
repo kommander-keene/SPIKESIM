@@ -16,7 +16,7 @@ class Yamada():
         self.solver = solver
         self.name = "yamada"
         self.spike_radius = radius
-    def simple_yamada(self, inputs, sim_step):
+    def simple_yamada(self):
         def delta(t):        
             return jnp.exp(-jnp.pow(t, 2)/(2*self.spike_radius))
         def force(t, args):
@@ -28,19 +28,16 @@ class Yamada():
                 spike += A*delta(t - i)
             return spike
         def f(t, y, args):
-            nonlocal inputs, sim_step
             G, Q, I = y
-            A, B, a, y_G, y_Q, y_I, eps, spikes = args
+            A, B, a, y_G, y_Q, y_I, eps, _ = args
             d_G = y_G * (A - G - G * I) + force(t, args)
             d_Q = y_Q * (B - Q - a * Q * I)
-            d_I = y_I * (G - Q - 1) * I
+            d_I = y_I * (G - Q - 1) * I + eps
             d_y = d_G, d_Q, d_I
             return d_y
         return f
-    def sim(self, inputs, start_time, end_time, step):
-        if (not inputs):
-            inputs = jnp.zeros(shape=int((end_time-start_time)/step)) # inputs of zeros
-        terms = ODETerm(self.simple_yamada(inputs, step))
+    def sim(self, start_time, end_time, step):
+        terms = ODETerm(self.simple_yamada())
 
         assert(isinstance(terms, ODETerm))
         assert(isinstance(self.initial_state, tuple))
@@ -54,7 +51,8 @@ class Yamada():
                           step,
                           self.initial_state,
                           args=self.params,
-                          saveat=saveat)
+                          saveat=saveat,
+                          max_steps=100000)
         self.sol = sol
     def plot(self):
         sol = self.sol
