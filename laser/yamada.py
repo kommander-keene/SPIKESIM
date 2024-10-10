@@ -32,7 +32,7 @@ class Yamada():
             A, B, a, y_G, y_Q, y_I, eps, _ = args
             d_G = y_G * (A - G - G * I) + force(t, args)
             d_Q = y_Q * (B - Q - a * Q * I)
-            d_I = y_I * (G - Q - 1) * I + eps
+            d_I = y_I * (G - Q - 1) * I + eps*G*G
             d_y = d_G, d_Q, d_I
             return d_y
         return f

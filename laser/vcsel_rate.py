@@ -28,8 +28,8 @@ def default_vcsel_parameters():
         10e-16, # Bimolecular recombination term [m^3 s^-1]
         1e-4, # spontaneous emission coupling factor
         0.4, # output power coupling coefficient
-        2e-3, # gain biasing current [A]
-        0, # absorber biasing current [A]
+        2e-3, # A gain biasing current [A]
+        0, # S absorber biasing current [A]
         )
 class VCSEL(Yamada):
     """
@@ -47,8 +47,8 @@ class VCSEL(Yamada):
         gamma_s = vcsel_parameters[4]
         g_a = vcsel_parameters[8]
         g_s = vcsel_parameters[9]
-        I_a = vcsel_parameters[-1]
-        I_s = vcsel_parameters[-2]
+        I_a = vcsel_parameters[-2]
+        I_s = vcsel_parameters[-1]
         Va = vcsel_parameters[1]
         Vs = vcsel_parameters[2]
         n_oa = vcsel_parameters[10]
@@ -75,8 +75,8 @@ class VCSEL(Yamada):
         gamma_s = vcsel_parameters[4]
         g_a = vcsel_parameters[8]
         g_s = vcsel_parameters[9]
-        I_a = vcsel_parameters[-1]
-        I_s = vcsel_parameters[-2]
+        I_a = vcsel_parameters[-2]
+        I_s = vcsel_parameters[-1]
         Va = vcsel_parameters[1]
         Vs = vcsel_parameters[2]
         n_oa = vcsel_parameters[10]
@@ -91,18 +91,20 @@ class VCSEL(Yamada):
         y_Q = tau_ph/tau_S
         y_I = 1
         # epsilon_F approximated to most significant value
-        epsilon_F = g_a*beta*Br/(tau_ph*tau_A*g_a)
+        epsilon_F = 8.35e-35
         # spikes (ASSUME PROCESSED)
         return A, B, a, y_G, y_Q, y_I, epsilon_F, spikes
+    
+    # NOTE CONVERT BACK FROM G Q I to physical constants before plotting
 if __name__ == "__main__":
     # TODO scaling
-    A = 1e-15 # really small
-    # spikes = ((A, 208), (-A, 833), (A, 1562.5), (A, 1666), (A, 1875), (A, 2083))
-    spikes = ((A, 1666), (A, 1875), (A, 2083))
+    A = 2e-15 # really small
+    spikes = ((A, 208), (-A, 833), (A, 1562.5), (A, 1666), (A, 1875), (A, 2083))
+    # spikes = ((0, 0),)
     output_spikes = VCSEL.inputs(default_vcsel_parameters(), spikes)
-    print(output_spikes)
+    # print(output_spikes)
     yamada_parameters = VCSEL.get_yamada(default_vcsel_parameters(), spikes=output_spikes)
-    print(yamada_parameters)
-    laser = VCSEL(params=yamada_parameters, initial_state=(-0.25, 0.75, 0.))
+    # print(yamada_parameters)
+    laser = VCSEL(params=yamada_parameters, initial_state=(0, 0, 0.))
     laser.sim(0, 3125, .1)
     laser.plot()
