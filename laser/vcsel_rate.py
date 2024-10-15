@@ -94,7 +94,7 @@ class VCSEL(Yamada):
         # spikes (ASSUME PROCESSED)
         return A, B, a, y_G, y_Q, y_I, epsilon_F, spikes
     
-    def __init__(self, params: tuple, initial_state=(0, 0, 0), solver=diffrax.Tsit5(), radius=0.001):
+    def __init__(self, params: tuple, initial_state=(0, 0, 0), solver=diffrax.Kvaerno5(), radius=0.001):
         super().__init__(params=params, initial_state=initial_state, solver=solver, radius=radius)
         self.name = "vcsel"
     
@@ -123,7 +123,7 @@ class VCSEL(Yamada):
         assert(isinstance(terms, ODETerm))
         assert(isinstance(self.initial_state, tuple))
         saveat = SaveAt(ts=jnp.linspace(start_time, end_time, 1000))
-        
+        stepsize_controller = diffrax.PIDController(rtol=1e-8, atol=1e-8, dtmax=0.1)
         sol = diffeqsolve(terms,
                           self.solver,
                           start_time,
@@ -132,7 +132,8 @@ class VCSEL(Yamada):
                           self.initial_state,
                           args=self.params,
                           saveat=saveat,
-                          max_steps=100000)
+                          max_steps=100000,
+                          stepsize_controller=stepsize_controller)
         self.sol = sol
     def plot(self, vc_sel_parameters=None):
         sol = self.sol
