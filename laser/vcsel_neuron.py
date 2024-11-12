@@ -9,6 +9,7 @@ class SpikingNeuron(NetworkLayer):
         inputs - a list of inputs that can be transferred 
         outputs - a list of outputs that can be transferred to other spiking neurons
         """
+        self.parameters = parameters
         self.laser = VCSEL(params=parameters, initial_state=bias) # define a laser item
         self.step_size = step_size
     def _time_range(self, times, epsilon = 10):
@@ -26,4 +27,5 @@ class SpikingNeuron(NetworkLayer):
         start, end = self._time_range(X, epsilon=5)
         self.laser.sim(start, end, self.step_size)
         return self.laser.sol
-
+    def plot(self, name, parameters, spikes=[(0, 0)]):
+        return self.laser.plot(name=name, vc_sel_parameters=parameters, spikes=spikes)
