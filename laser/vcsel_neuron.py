@@ -4,7 +4,7 @@ class SpikingNeuron(NetworkLayer):
     """
     A wrapper defining a singular spiking neuron
     """
-    def __init__(self, parameters, bias=(0, 0, 0), step_size=0.1):
+    def __init__(self, parameters, bias=(0, 0, 0), step_size=0.1, name=""):
         """
         inputs - a list of inputs that can be transferred 
         outputs - a list of outputs that can be transferred to other spiking neurons
@@ -12,6 +12,7 @@ class SpikingNeuron(NetworkLayer):
         self.parameters = parameters
         self.laser = VCSEL(params=parameters, initial_state=bias) # define a laser item
         self.step_size = step_size
+        self.name = name
     def _time_range(self, times, epsilon = 10):
         """
         given a list of times -- times
@@ -25,7 +26,7 @@ class SpikingNeuron(NetworkLayer):
         Given a list of inputs at X, run a simulation
         """
         start, end = self._time_range(X, epsilon=5)
-        self.laser.sim(start, end, self.step_size)
+        self.laser.sim(X, start, end, self.step_size)
         return self.laser.sol
-    def plot(self, name, parameters, spikes=[(0, 0)]):
-        return self.laser.plot(name=name, vc_sel_parameters=parameters, spikes=spikes)
+    def plot(self, name):
+        return self.laser.plot(name=name)

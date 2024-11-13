@@ -8,6 +8,11 @@ import diffrax
 from diffrax import diffeqsolve, ODETerm, SaveAt
 from yamada import Yamada
 from tqdm import tqdm
+def default_steady_state():
+    """
+    Given a default set of parameters, save the steady state values
+    """
+    return (3.4312801739727607, 3.0971999999999262, 0)
 def default_vcsel_parameters():
     """
     VCSEL parameters copied from the paper
@@ -118,10 +123,13 @@ class VCSEL(Yamada):
             d_y = d_G, d_Q, d_I
             return d_y
         return f
-    def sim(self, start_time, end_time, step):
+    def sim(self, inputs, start_time, end_time, step):
         terms = ODETerm(self.simple_yamada())
+        output_spikes = format_inputs(self.params, inputs)
+        forcing_terms_and_parameters = get_vcsel_yamada_model(self.params, output_spikes)
         assert(isinstance(terms, ODETerm))
         assert(isinstance(self.initial_state, tuple))
+
         saveat = SaveAt(ts=jnp.linspace(start_time, end_time, 1000))
         stepsize_controller = diffrax.PIDController(rtol=1e-8, atol=1e-8, dtmax=0.1)
         sol = diffeqsolve(terms,
@@ -130,96 +138,81 @@ class VCSEL(Yamada):
                           end_time,
                           step,
                           self.initial_state,
-                          args=self.params,
+                          args=forcing_terms_and_parameters,
                           saveat=saveat,
                           max_steps=100000,
                           stepsize_controller=stepsize_controller)
         self.sol = sol
-    def plot(self, name="vcsel", vc_sel_parameters=None, spikes=((0, 0)), plotting_steps=1):
+        self.spikes = output_spikes
+    def plot(self, name="vcsel", vc_sel_parameters=None, plotting_steps=1):
         sol = self.sol
-        if (vc_sel_parameters):
-            tau_A = vc_sel_parameters[5]
-            tau_S = vc_sel_parameters[6]
-            tau_ph = vc_sel_parameters[7]
-            gamma_a = vc_sel_parameters[3]
-            gamma_s = vc_sel_parameters[4]
-            g_a = vc_sel_parameters[8]
-            g_s = vc_sel_parameters[9]
-            I_a = vc_sel_parameters[-2]
-            I_s = vc_sel_parameters[-1]
-            Va = vc_sel_parameters[1]
-            Vs = vc_sel_parameters[2]
-            n_oa = vc_sel_parameters[10]
-            n_os = vc_sel_parameters[11]
-            beta = vc_sel_parameters[13]
-            Br = vc_sel_parameters[12]
-            nu = vc_sel_parameters[14]
-            lambda_ = vc_sel_parameters[0]
-            # plotting input spikes
-            min_value = float(jnp.min(sol.ts))
-            max_value = float(jnp.max(sol.ts))
-            step_size = plotting_steps
+        spikes = self.spikes
+        vc_sel_parameters = self.params
+       
+        tau_A = vc_sel_parameters[5]
+        tau_S = vc_sel_parameters[6]
+        tau_ph = vc_sel_parameters[7]
+        gamma_a = vc_sel_parameters[3]
+        gamma_s = vc_sel_parameters[4]
+        g_a = vc_sel_parameters[8]
+        g_s = vc_sel_parameters[9]
+        I_a = vc_sel_parameters[-2]
+        I_s = vc_sel_parameters[-1]
+        Va = vc_sel_parameters[1]
+        Vs = vc_sel_parameters[2]
+        n_oa = vc_sel_parameters[10]
+        n_os = vc_sel_parameters[11]
+        beta = vc_sel_parameters[13]
+        Br = vc_sel_parameters[12]
+        nu = vc_sel_parameters[14]
+        lambda_ = vc_sel_parameters[0]
+        # plotting input spikes
+        min_value = float(jnp.min(sol.ts))
+        max_value = float(jnp.max(sol.ts))
+        step_size = plotting_steps
 
-            fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, figsize=(6, 6))
-            ax3.plot(sol.ts, sol.ys[0]/(tau_ph * gamma_a * g_a) + n_oa, label="Gain Carrier Concentration", color="red")
-            ax3.set_title('Gain Carrier Concentration')
-            ax3.set_xlabel('Time / Photon Lifetime')
-            ax3.set_ylabel('Density [m^-3]')
-            # G_thresh_eq = (tau_S*tau_ph*gamma_a*g_a*(n_os/tau_S - I_s/(1.6e-19*Vs))) + 1
-            # G_thresh_eq_to_na = G_thresh_eq
+        fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, figsize=(6, 6))
+        ax3.plot(sol.ts, sol.ys[0]/(tau_ph * gamma_a * g_a) + n_oa, label="Gain Carrier Concentration", color="red")
+        ax3.set_title('Gain Carrier Concentration')
+        ax3.set_xlabel('Time / Photon Lifetime')
+        ax3.set_ylabel('Density [m^-3]')
+        # G_thresh_eq = (tau_S*tau_ph*gamma_a*g_a*(n_os/tau_S - I_s/(1.6e-19*Vs))) + 1
+        # G_thresh_eq_to_na = G_thresh_eq
 
-            ax3.plot(sol.ts, [(i + 1)/(tau_ph * gamma_a * g_a) + n_oa for i in sol.ys[1]], label="Threshold Level", color="purple")
+        ax3.plot(sol.ts, [(i + 1)/(tau_ph * gamma_a * g_a) + n_oa for i in sol.ys[1]], label="Threshold Level", color="purple")
 
-            ax4.plot(sol.ts, -(sol.ys[1]/(tau_ph * gamma_s * g_s) - n_oa), label="SA Carrier Concentration", color="blue")
-            ax4.set_title('SA Carrier Concentration')
-            ax4.set_xlabel('Time / Photon Lifetime')
-            ax4.set_ylabel('Density [m^-3]')
+        ax4.plot(sol.ts, -(sol.ys[1]/(tau_ph * gamma_s * g_s) - n_oa), label="SA Carrier Concentration", color="blue")
+        ax4.set_title('SA Carrier Concentration')
+        ax4.set_xlabel('Time / Photon Lifetime')
+        ax4.set_ylabel('Density [m^-3]')
 
-            ax2.plot(sol.ts, (sol.ys[2]*Va/(tau_A * gamma_a * g_a))*(nu*gamma_a*1.98e-25)/(tau_ph*lambda_), label="Laser Output Power", color="green")
-            ax2.set_title('Output Power')
-            ax2.set_xlabel('Time / Photon Lifetime')
-            ax2.set_ylabel('Power [W]')
+        ax2.plot(sol.ts, (sol.ys[2]*Va/(tau_A * gamma_a * g_a))*(nu*gamma_a*1.98e-25)/(tau_ph*lambda_)*1000, label="Laser Output Power", color="green")
+        ax2.set_title('Output Power')
+        ax2.set_xlabel('Time / Photon Lifetime')
+        ax2.set_ylabel('Power [mW]')
 
-            for amplitude, time in spikes:
-                ax1.vlines(x=time, ymin=0, ymax=amplitude, linewidth=2)
-            ax1.plot(sol.ts, [0]* len(sol.ts))
-            ax1.set_title('Input Spikes')
-            ax2.set_xlabel('Time / Photon Lifetime')
-            ax1.set_ylabel('A.U.')
-
-            # Adjust layout
-            plt.tight_layout()
-            plt.savefig(f"{name}_save_quantities.png")
-            # plt.show()
-        else:
-            plt.plot(sol.ts, sol.ys[0], label="Gain")
-            plt.plot(sol.ts, sol.ys[1], label="Absorption")
-            plt.plot(sol.ts, sol.ys[2], label="Laser Intensity")
-            plt.legend()
-
-            plt.savefig(f"{name}_save_variables.png")
-            # plt.show()
+        for amplitude, time in spikes:
+            ax1.vlines(x=time, ymin=0, ymax=amplitude, linewidth=2)
+        ax1.plot(sol.ts, [0]* len(sol.ts))
+        ax1.set_title('Input Spikes')
+        ax1.set_xlabel('Time / Photon Lifetime')
+        ax1.set_ylabel('A')
+        # Adjust layout
+        fig.tight_layout()
+        fig.savefig(f"{name}_save_quantities.png")
+        # plt.show()
 def experiment_1():
     # NOTE spiking power is arbitrary and unclear right now and noise is virtually ignored
-    A = 1
+    A = 1 # this is the current in amperes
     spikes = ((A, 208), (-A, 833), (A, 1562.5), (A, 1666), (A, 1875), (A, 2083))
-    # spikes = ((0, 0),)
-    output_spikes = format_inputs(default_vcsel_parameters(), spikes)
-    yamada_parameters = get_vcsel_yamada_model(default_vcsel_parameters(), spikes=output_spikes)
-    # print(yamada_parameters)
-    laser = VCSEL(params=yamada_parameters, initial_state=(4, 3, 0.))
-    laser.sim(0, 3125, .1)
-    laser.plot(vc_sel_parameters=default_vcsel_parameters(), spikes=output_spikes)
+    laser = VCSEL(params=default_vcsel_parameters(), initial_state=default_steady_state())
+    laser.sim(spikes, 0, 3125, .1)
+    laser.plot()
 def experiment_2():
     A = 6
     spikes = ((-A, 260), (-A, 900), (-A, 1562), (-A, 2100), (-A, 2700), (A, 520), (A, 1041), (A, 1562), (A, 2020), (A, 2604))
-    # spikes = ((0, 0),)
-    output_spikes = format_inputs(default_vcsel_parameters(), spikes)
-    # print(output_spikes)
-    yamada_parameters = get_vcsel_yamada_model(default_vcsel_parameters(), spikes=output_spikes)
-    # print(yamada_parameters)
-    laser = VCSEL(params=yamada_parameters, initial_state=(0, 0, 0.))
-    laser.sim(0, 3125, .1)
-    laser.plot(default_vcsel_parameters(), spikes=output_spikes)
+    laser = VCSEL(params=default_vcsel_parameters(), initial_state=default_steady_state())
+    laser.sim(spikes, 0, 3125, .1)
+    laser.plot()
 if __name__ == "__main__":
     experiment_1()

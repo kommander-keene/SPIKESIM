@@ -65,7 +65,7 @@ class Yamada():
         plt.show()
 
 if __name__ == "__main__":
-    spikes = ((10, 20), (-10, 40))
-    yamada = Yamada(params=(0.1, 0.02, 0.4, 0.02, 0.5, 0.5, 0, spikes), initial_state=(0., 0., 0.))
-    yamada.sim(None, 0, 140, .1)
+    spikes = ((-10, 20), (10, 40), (10, 50), (10, 80))
+    yamada = Yamada(params=(4.3, 3.52, 1.8, .05, 0.06, 0.06, 0, spikes), initial_state=(3, 3, 0))
+    yamada.sim(0, 140, .1)
     yamada.plot()
