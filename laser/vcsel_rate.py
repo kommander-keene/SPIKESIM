@@ -203,11 +203,14 @@ class VCSEL(Yamada):
         # plt.show()
 def experiment_1():
     # NOTE spiking power is arbitrary and unclear right now and noise is virtually ignored
-    A = 1 # this is the current in amperes
+    A = 0.005 # this is the current in amperes
     spikes = ((A, 208), (-A, 833), (A, 1562.5), (A, 1666), (A, 1875), (A, 2083))
-    laser = VCSEL(params=default_vcsel_parameters(), initial_state=default_steady_state())
+    laser = VCSEL(params=default_vcsel_parameters(), initial_state=default_steady_state(), radius=109)
     laser.sim(spikes, 0, 3125, .1)
     laser.plot()
+
+    # the radius of each pulse in the experiment approx 0.5263157895 ns
+    # hence the radius of each pulse should be approximately 109 normalized time units
 def experiment_2():
     A = 6
     spikes = ((-A, 260), (-A, 900), (-A, 1562), (-A, 2100), (-A, 2700), (A, 520), (A, 1041), (A, 1562), (A, 2020), (A, 2604))

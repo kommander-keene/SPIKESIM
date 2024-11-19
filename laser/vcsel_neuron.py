@@ -28,5 +28,5 @@ class SpikingNeuron(NetworkLayer):
         start, end = self._time_range(X, epsilon=5)
         self.laser.sim(X, start, end, self.step_size)
         return self.laser.sol
-    def plot(self, name):
+    def plot(self, name, parameters, spikes=[(0, 0)]):
         return self.laser.plot(name=name)

@@ -4,11 +4,10 @@ from vcsel_rate import default_vcsel_parameters
 from vcsel_rate import format_inputs, get_vcsel_yamada_model, default_steady_state
 class SpikingNetwork():
     """
-    A class defining a spiking neural network.
+    A class defining a sequential spiking network spiking neural network.
     """
     def __init__(self):
         self.network_layers = []
-
     def add_input(self, neuron, name):
         self.network_layers.append(neuron)
         self.network_layers[-1].name = name
@@ -22,7 +21,6 @@ class SpikingNetwork():
         if (numerical_outputs):
             return forwarded_inputs.ys
         return forwarded_inputs
-    
 def one_network():
     DEFAULTPARAMS = default_vcsel_parameters()
     A = 1 # this seems to be OFF for some reason
